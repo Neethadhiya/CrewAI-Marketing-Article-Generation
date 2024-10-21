@@ -16,7 +16,7 @@ os.environ["OPENAI_API_KEY"] = os.getenv('OPENAI_API_KEY')
 os.environ["OPENAI_MODEL_NAME"] = os.getenv('OPENAI_MODEL_NAME')
 
 from os.path import join, dirname
-env_path = "/home/appscrip/Desktop/Neetha/Marketing Article/.env "
+env_path = "/home/appscrip/Desktop/Neetha/Crewai-Marketing-Article-Generation/.env"
 load_dotenv(dotenv_path=env_path)
 class ArticleTasks:
     def __init__(self):
@@ -39,18 +39,27 @@ class ArticleTasks:
                         """,
             agent=agent,
             expected_output=f"""
-            A content outline that's more comprehensive than these competitors and add each topic and subtopic detailed 
-            definition and description about the topic.Don't give as introduction and definition as heading in the first
-            section.Instead, start with a compelling story or 
-            a real-life example related to the topic.Don't add additional resources or links.Give a bit more elaborate 
-            information about the topic in the first section.Also, include a “What is {keyword}?” section with a 
-            clear and concise explanation of the keyword in an NLP-friendly format using paragraphs of 2-4 sentences.
+            Please return the response in the following JSON format:
+            {{
+                "content_outline": [
+                    {{
+                        "title": "Section Title",
+                        "description": "Detailed description of the section."
+                    }},
+                    {{
+                        "title": "What is {keyword}?",
+                        "description": "Clear and concise explanation of the keyword in an NLP-friendly format."
+                    }}
+                    // You can include additional sections here.
+                ]
+            }}
             """,
             inputs={
                 "query": keyword  
             },
             async_execution=False
         )
+
     
  
         
@@ -68,7 +77,11 @@ class ArticleTasks:
                                     
                                     """),
                     agent=agent,
-                    expected_output="A concise meta description between 148 and 158 characters.",
+                    expected_output="""
+                                        {
+                                            "meta_description": "A concise meta description between 148 and 158 characters that includes the keyword."
+                                        }
+                                        """,
                     async_execution=False
                  )
 
@@ -85,7 +98,33 @@ class ArticleTasks:
                 """
             ),
             agent=agent,
-            expected_output=f"A pros and cons table for {keyword} with detailed explanations.",
+            expected_output=f"""
+                                {{
+                                    "pros": [
+                                        {{
+                                            "point": "<Pro point 1 for {keyword}>",
+                                            "explanation": "<Brief explanation of Pro point 1.>"
+                                        }},
+                                        {{
+                                            "point": "<Pro point 2 for {keyword}>",
+                                            "explanation": "<Brief explanation of Pro point 2.>"
+                                        }}
+                                        // Add more pro points as necessary
+                                    ],
+                                    "cons": [
+                                        {{
+                                            "point": "<Con point 1 for {keyword}>",
+                                            "explanation": "<Brief explanation of Con point 1.>"
+                                        }},
+                                        {{
+                                            "point": "<Con point 2 for {keyword}>",
+                                            "explanation": "<Brief explanation of Con point 2.>"
+                                        }}
+                                        // Add more con points as necessary
+                                    ]
+                                }}
+                                """,
+
             async_execution=False
         )
 
@@ -103,17 +142,61 @@ class ArticleTasks:
                 """
             ),
             agent=agent,
-            expected_output=f"An FAQ section with 5 or more questions and answers for {keyword}.",
+            expected_output=f"""
+            {{
+                "faqs": [
+                    {{
+                        "question": "<Question 1>",
+                        "answer": "<Answer 1>"
+                    }},
+                    {{
+                        "question": "<Question 2>",
+                        "answer": "<Answer 2>"
+                    }},
+                    {{
+                        "question": "<Question 3>",
+                        "answer": "<Answer 3>"
+                    }},
+                    {{
+                        "question": "<Question 4>",
+                        "answer": "<Answer 4>"
+                    }},
+                    {{
+                        "question": "<Question 5>",
+                        "answer": "<Answer 5>"
+                    }}
+                    // Add more FAQ entries as necessary
+                ]
+            }}
+
+            """,
             async_execution=False
         )
+
     
     def myth_busting_task(self, agent, keyword):
         return Task(
             description=f"Create a 'Common Myths About {keyword} Debunked' section",
             agent = agent,
-            expected_output=dedent(f"""List and debunk 5-10 myths related to {keyword}. 
-            Format the output as a markdown list, with each myth as a subheading and 
-            its debunking as the content.Do not number as Myth 1, Myth 2, etc. Just list them as a bulleted list."""),
+            expected_output=dedent(f"""{{
+                                        "myths": [
+                                            {{
+                                                "myth": "<Myth 1 related to {keyword}>",
+                                                "debunking": "<Explanation debunking Myth 1>"
+                                            }},
+                                            {{
+                                                "myth": "<Myth 2 related to {keyword}>",
+                                                "debunking": "<Explanation debunking Myth 2>"
+                                            }},
+                                            {{
+                                                "myth": "<Myth 3 related to {keyword}>",
+                                                "debunking": "<Explanation debunking Myth 3>"
+                                            }}
+                                            // Add more myths and their debunkings as necessary
+                                        ]
+                                    }}
+                                    """),
+
             inputs={
                 "query": keyword
             },
@@ -128,31 +211,43 @@ class ArticleTasks:
             {self.__tip_section()}""",
             agent=agent,
             expected_output=dedent(f"""
-                A list of the top 10 interesting statistics about {keyword} 
-                extracted from the analyzed data sources.
+                {{
+                    "statistics": [
+                        {{
+                            "title": "<title_1>",
+                            "statistic": "<statistic_1>"
+                        }},
+                        {{
+                            "title": "<title_2>",
+                            "statistic": "<statistic_2>"
+                        }},
+                    add more
+                    ]
+                }}
             """),
             async_execution=False
         )
+
         
     def title_task(self, agent, keyword):
         return Task(
             description=f"""
             Generate a best SEO title for an SEO article targeting the keyword {keyword}. Limit it to 50-60 characters maximum.
-        Use whichever of the following elements you see fit:
-        - year
-        - numbers
-        - desired results
-        - beginner's guide
-        - by topic experts
-        
-        {self.__tip_section()}
-        
-        The final title should be a dictionary with the format:
-        {{
-            "title": "<SEO Title 1>",
-           
-        }}
-            """,
+            Use whichever of the following elements you see fit:
+            - year
+            - numbers
+            - desired results
+            - beginner's guide
+            - by topic experts
+            
+            {self.__tip_section()}
+            
+            The final title should be a dictionary with the format:
+            {{
+                "title": "<SEO Title 1>",
+            
+            }}
+                """,
             agent=agent,
             expected_output=dedent(f"""
                 The best SEO title for an SEO article targeting the keyword {keyword} in dictionary format.
@@ -170,37 +265,36 @@ class ArticleTasks:
                                             faq_result,
                                             myth_busting_result,
                                             pdf_statistic_result,
-                                            
-                                            ):
+                                        ):
         sections_to_optimize = {
-        "Content": content_result,
-        "Pros and Cons": pros_and_cons_result,
-        "FAQ": faq_result,
-        "Myth Busting": myth_busting_result,
-        "PDF Statistics": pdf_statistic_result,
-    }   
-        
+            "Content": content_result,
+            "Pros and Cons": pros_and_cons_result,
+            "FAQ": faq_result,
+            "Myth Busting": myth_busting_result,
+            "PDF Statistics": pdf_statistic_result,
+        }   
 
         return Task(
             description=f"""
                 Step 1: Please read the guidelines about how Google featured snippets work at the following link: 
-            [https://searchengineland.com/google-featured-snippets-optimization-guidelines-389951]. Please focus on improving 
-            the clarity, structure, and presentation to align with the guidelines used for featured snippets.
-            Step 2: Optimize the content for Google snippets using the results from prior tasks provided below:
-            1. **Content Section:** {content_result}
-            2. **Pros and Cons Section:** {pros_and_cons_result}
-            3. **FAQ Section:** {faq_result}
-            4. **Myth Busting Section:** {myth_busting_result}
-            5. **PDF Statistics Section:** {pdf_statistic_result}
-            Step 3: Simplify the blog post content to a 6th-grade English reading level to ensure that the 
-            information is easy to understand for a wider audience.
+                [https://searchengineland.com/google-featured-snippets-optimization-guidelines-389951]. 
+                Focus on improving clarity, structure, and presentation to align with the guidelines used for featured snippets.
+                
+                Step 2: Optimize the content for Google snippets using the results from prior tasks provided below:
+                1. **Content Section:** {content_result}
+                2. **Pros and Cons Section:** {pros_and_cons_result}
+                3. **FAQ Section:** {faq_result}
+                4. **Myth Busting Section:** {myth_busting_result}
+                5. **PDF Statistics Section:** {pdf_statistic_result}
+                
+                Step 3: Generate a complete marketing article blog post that ranks at the top of search results. Ensure that the content is optimized for readability and 
+                comprehension at a 6th-grade level, making it accessible to a wider audience.
             """,
             agent=agent,
-            expected_output="""Revised sections for Google Snippets and aligned with a 
-                            6th-grade reading level.""",
+            expected_output="Full marketing article including all optimized sections and a conclusion.",
             inputs={
                 "keyword": keyword,
-                "sections_to_optimize": sections_to_optimize # Provide the results as input to the agent
+                "sections_to_optimize": sections_to_optimize
             },
             async_execution=False
         )

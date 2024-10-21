@@ -9,7 +9,7 @@ from langchain.prompts import ChatPromptTemplate
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from os.path import join, dirname
-env_path = "/home/appscrip/Desktop/Neetha/Marketing Article/.env "
+env_path = "/home/appscrip/Desktop/Neetha/Crewai-Marketing-Article-Generation/.env"
 load_dotenv(dotenv_path=env_path)
 # Set OpenAI API key
 os.environ["OPENAI_API_KEY"] = os.getenv('OPENAI_API_KEY')
@@ -118,8 +118,8 @@ class ArticleAgents():
     )
   
    
-  def google_snippet_optimization_agent(self, keyword):
-    search_tool = GoogleSnippetOptimizeTool() 
+  def google_snippet_optimization_agent(self, keyword, sections_to_optimize):
+    optimize_tool = GoogleSnippetOptimizeTool() 
     return Agent(
         role='Google Snippet Optimization Expert',
         goal="""
@@ -134,7 +134,8 @@ class ArticleAgents():
                     answers for specific queries. After reading the provided guidelines, you will optimize our 
                     content to meet these standards.
                   """,
-        tools=[search_tool],
+        tools=[optimize_tool],
         verbose=True
     )
+
 

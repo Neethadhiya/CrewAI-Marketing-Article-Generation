@@ -7,9 +7,27 @@ import json
 import os
 from dotenv import load_dotenv
 from os.path import join, dirname
-env_path = "/home/appscrip/Desktop/Neetha/Marketing Article/.env "
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+
+env_path = "/home/appscrip/Desktop/Neetha/Crewai-Marketing-Article-Generation/.env"
 load_dotenv(dotenv_path=env_path)
 import random
+
+tracer_provider = None
+
+def initialize_tracer_provider():
+    global tracer_provider
+    if tracer_provider is None:
+        print("Initializing TracerProvider...")
+        tracer_provider = TracerProvider()
+        trace.set_tracer_provider(tracer_provider)
+    else:
+        print("TracerProvider is already initialized.")
+
+# Call the function to initialize the TracerProvider
+initialize_tracer_provider()
+
 
 class ArticleCrew:
 
@@ -28,7 +46,6 @@ class ArticleCrew:
         myth_busting_agent = agents.myth_busting_agent()
         pdf_statistic_agent = agents.pdf_statistic_agent(keyword=self.keyword)
         title_agent = agents.title_agent()
-        google_snippet_optimization = agents.google_snippet_optimization_agent(keyword=self.keyword)
         # Step 1: Content Selection Task
         content_selection_task = tasks.content_selection_task(
             content_selector_agent,
@@ -115,34 +132,24 @@ class ArticleCrew:
             verbose=True
         )
         title_result = crew.kickoff()
-        print("11111",content_result,"1111111111")
-        print("222222222",pros_and_cons_result,"2222222222")
-        print("33333333333",faq_result,"3333333333")
-        print("444444444",myth_busting_result,"444444")
-        print("55555555",pdf_statistic_result,"555555555555555")
-        print("666666666666",title_result,"666666666666")
-
-        content_result_dict = json.loads(content_result) 
-        pros_and_cons_result_dict = json.loads(pros_and_cons_result) 
-        faq_result_dict = json.loads(faq_result) 
-        myth_busting_result_dict = json.loads(myth_busting_result) 
-        pdf_statistic_result_dict = json.loads(pdf_statistic_result) 
-        print("lllllkkkkkkkkkkksdfsdddddddddddddddddddddd")
-
-        print("11111",content_result_dict,"1111111111")
-        print("222222222",pros_and_cons_result_dict,"2222222222")
-        print("33333333333",faq_result_dict,"3333333333")
-        print("444444444",myth_busting_result_dict,"444444")
-        print("55555555",pdf_statistic_result_dict,"555555555555555")
-        print("666666666666",title_result,"666666666666")
+        sections_to_optimize = {
+                "Content": content_result,
+                "Pros and Cons": pros_and_cons_result,
+                "FAQ": faq_result,
+                "Myth Busting": myth_busting_result,
+                "PDF Statistics": pdf_statistic_result,
+            }
+        google_snippet_optimization = agents.google_snippet_optimization_agent(
+                                                                                keyword=self.keyword,
+                                                                                sections_to_optimize=sections_to_optimize)          
         google_snippet_optimization_task = tasks.google_snippet_optimization_task(
             google_snippet_optimization,
             self.keyword,
-            content_result_dict,  # Now this is a dict
-            pros_and_cons_result_dict,  # Now this is a dict
-            faq_result_dict,  # Now this is a dict
-            myth_busting_result_dict,  # Now this is a dict
-            pdf_statistic_result_dict  # Now
+            content_result,  # Now this is a dict
+            pros_and_cons_result,  # Now this is a dict
+            faq_result,  # Now this is a dict
+            myth_busting_result,  # Now this is a dict
+            pdf_statistic_result  # Now
         )
         crew = Crew(
             agents=[google_snippet_optimization],
@@ -150,13 +157,8 @@ class ArticleCrew:
             verbose=True
         )
         google_snippet_optimization_result = crew.kickoff()
-        final_result = {
-            "content_result": content_result,
-            "meta_description_result": meta_description_result,
-            "pros_and_cons_result": pros_and_cons_result,
-            "faq_result": faq_result,
-            "myth_busting_result": myth_busting_result,
-            "pdf_statistic_result": pdf_statistic_result,
+        final_result = {         
+            "meta_description_result": meta_description_result,          
             "title_result": title_result,
             "google_snippet_optimization_result": google_snippet_optimization_result
         }
@@ -177,34 +179,17 @@ if __name__ == "__main__":
 
     # Define the output file
     output_file = 'marketing_article_output.txt'
-    title_result = result.get('title_result')
-    print(result['title_result'],"title_result==========")
-    # Initialize best_title
-    best_title = None           
-    best_title = title_result['title']
+    title_result_str = result['title_result'].raw
+    data = json.loads(title_result_str)
+    title = data.get("title")
   
     final_output = (
-        "########################\n\n"
-        f"{best_title}\n\n"
-        "########################\n\n"
-        f"{result['content_result']}\n\n"
-        "## Pros and Cons\n"
-        "########################\n\n"
-        f"{result['pros_and_cons_result']}\n\n"
-        
-        "## Myth Busting\n"
-        "########################\n\n"
-        f"{result['myth_busting_result']}\n\n"
-        f"## Amazing Statistics on {keyword}\n"
-        "########################\n\n"
-        f"{result['pdf_statistic_result']}\n\n"
-       "## FAQ\n"
-        "########################\n\n"
-        f"{result['faq_result']}\n\n"
-        # "## Google Snippet Optimization\n"
-        # "########################\n\n"
-        # f"{result['google_snippet_optimization_result']}\n"
-    )
+    # "########################\n\n"
+    # f"{title}\n\n"  # Corrected this line
+    # "########################\n\n"
+    f"{result['google_snippet_optimization_result']}\n"
+)
+
 
     # Open the file in write mode and write the final output
     with open(output_file, 'w') as file:

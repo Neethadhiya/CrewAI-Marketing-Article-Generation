@@ -1,0 +1,14 @@
+# tracer.py
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+
+tracer_provider = None
+
+def initialize_tracer_provider():
+    global tracer_provider
+    if tracer_provider is None:
+        tracer_provider = TracerProvider()
+        trace.set_tracer_provider(tracer_provider)
+    else:
+        print("TracerProvider is already initialized.")
+
