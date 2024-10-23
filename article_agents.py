@@ -4,6 +4,7 @@ from langchain.llms import OpenAI
 from langchain.schema import HumanMessage
 from tools.search_summarise_tools import SearchSummarizeTool
 from tools.google_snippet_optimize_tool import GoogleSnippetOptimizeTool
+from tools.faq_tools import FAQTool
 
 from langchain.prompts import ChatPromptTemplate
 from dotenv import load_dotenv
@@ -11,14 +12,16 @@ from langchain_openai import ChatOpenAI
 from os.path import join, dirname
 env_path = "/home/appscrip/Desktop/Neetha/Crewai-Marketing-Article-Generation/.env"
 load_dotenv(dotenv_path=env_path)
+import PyPDF2  # for extracting text from PDF
+import re  # for extracting statistical patterns like percentages or numbers
 # Set OpenAI API key
 os.environ["OPENAI_API_KEY"] = os.getenv('OPENAI_API_KEY')
 
 class ArticleAgents():
   
 
-  def content_selection_agent(self, keyword):
-    search_tool = SearchSummarizeTool() 
+  def content_selection_agent(self, keyword, country_code):
+    search_tool = SearchSummarizeTool(country_code=country_code) 
     return Agent(
         role='Content Selection Expert',
         goal=f"""
@@ -66,16 +69,19 @@ class ArticleAgents():
         verbose=True
     )
 
-  def faq_agent(self):
+  def faq_agent(self, keyword):
+    faq_tool = FAQTool()  # Use the FAQTool here
     return Agent(
         role='FAQ Expert',
-        goal='To create a list of FAQs for a given topic.',
+        goal='To create a list of FAQs for a given topic using Google Serp API for "People Also Ask" questions.',
         backstory="""
-            The agent is trained to analyze a given topic and create a list of FAQs.
+            The agent is trained to analyze a given topic and create a list of FAQs. It uses Google search results
+            to find relevant 'People Also Ask' questions and provides comprehensive answers.
         """,
-        tools=[],
+        tools=[faq_tool],  # Pass the Serper API tool
         verbose=True
     )
+
   
   def myth_busting_agent(self):
     return Agent(
@@ -90,13 +96,14 @@ class ArticleAgents():
         verbose=True
     )
 
-  def pdf_statistic_agent(self, keyword):
+  def pdf_statistic_agent(self, keyword, pdf_path):
     
     return Agent(
         role='Statistics Expert',
-        goal='Extract top 10 interesting statistics about the keyword.',
+        goal='Extract the top 10 interesting statistics about "{keyword}" from the provided {pdf_path}',
         backstory="""
-                   Your job is to extract the most relevant 10 statistics about the keyword.
+                   Your job is to extract the most relevant 10 statistics about the keyword. 
+                   Focus on numerical data, percentages, and important metrics mentioned in the PDF.
         """,
         tools=[],
         verbose=True
@@ -118,8 +125,8 @@ class ArticleAgents():
     )
   
    
-  def google_snippet_optimization_agent(self, keyword, sections_to_optimize):
-    optimize_tool = GoogleSnippetOptimizeTool() 
+  def google_snippet_optimization_agent(self, keyword, sections_to_optimize,country_code):
+    optimize_tool = GoogleSnippetOptimizeTool(country_code=country_code) 
     return Agent(
         role='Google Snippet Optimization Expert',
         goal="""

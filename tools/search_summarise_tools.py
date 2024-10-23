@@ -12,10 +12,11 @@ from langchain_core.pydantic_v1 import BaseModel, Field
 from googlesearch import search
 
 
-def search_summarize(keyword: str) -> str:
+def search_summarize(keyword: str, country_code: str) -> str:
     """Perform a web search and summarize the results."""
     llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.7)
-    results = search(keyword, num_results=7)
+    search_query = f"{keyword} site:.{country_code}" 
+    results = search(search_query, num_results=7)
     links = []
     for i, result in enumerate(results, 1):
         links.append(result)
@@ -59,14 +60,10 @@ def search_summarize(keyword: str) -> str:
     return summary_content
     
 
-def SearchSummarizeTool():
-    # return Tool(
-    #     name="search_summarize",
-    #     func=lambda keyword: search_summarize(keyword),  # Pass keyword as an argument
-    #     description="Search the web and summarize the top 3 results for the provided keyword."
-    # )
+def SearchSummarizeTool(country_code: str):
+
     return Tool(
         name="search_summarize",
-        func=lambda keyword: search_summarize(keyword),  # Pass keyword as an argument
-        description="Search the web and summarize the top 3 results for the provided keyword."
+        func=lambda keyword: search_summarize(keyword, country_code),  # Pass keyword as an argument
+        description="Search the web for the specified keyword and summarize the top 3 results relevant to that keyword from the given country."
     )

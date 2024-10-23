@@ -23,7 +23,7 @@ class ArticleTasks:
         self.llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.7)
   
 
-    def content_selection_task(self, agent, keyword):
+    def content_selection_task(self, agent, keyword, country_code):
       
         return Task(
             description=f"""
@@ -55,7 +55,8 @@ class ArticleTasks:
             }}
             """,
             inputs={
-                "query": keyword  
+                "query": keyword ,
+                "country_code": country_code 
             },
             async_execution=False
         )
@@ -130,48 +131,27 @@ class ArticleTasks:
 
     def faq_task(self, agent, keyword):
         return Task(
-            description=dedent(
-                f"""
-                You are a FAQ Expert. Your task is to develop a comprehensive FAQ section for the topic: {keyword}.
-                - Create at least 5 commonly asked questions related to {keyword}.
-                - Provide detailed and informative answers to each question, addressing potential concerns and
-                providing valuable insights.
-                - Ensure that the questions do not repeat any information already answered within the main article.
-                - Answers should be written in a clear, concise, and NLP-friendly format.
-                {self.__tip_section()}
-                """
-            ),
-            agent=agent,
-            expected_output=f"""
-            {{
-                "faqs": [
-                    {{
-                        "question": "<Question 1>",
-                        "answer": "<Answer 1>"
-                    }},
-                    {{
-                        "question": "<Question 2>",
-                        "answer": "<Answer 2>"
-                    }},
-                    {{
-                        "question": "<Question 3>",
-                        "answer": "<Answer 3>"
-                    }},
-                    {{
-                        "question": "<Question 4>",
-                        "answer": "<Answer 4>"
-                    }},
-                    {{
-                        "question": "<Question 5>",
-                        "answer": "<Answer 5>"
-                    }}
-                    // Add more FAQ entries as necessary
-                ]
-            }}
-
+            description=f"""
+            You are a FAQ Expert. Your task is to develop a comprehensive FAQ section for the topic: '{keyword}'.
+            - Use the Google Serp API to fetch at least 5 commonly asked 'People Also Ask' questions related to {keyword}.
+            - Use the 'question' field from the tool's results for the FAQ question.
+            - Use the 'snippet' field from the tool's results for the answer to each FAQ.
+            - Ensure answers are NLP-friendly and do not repeat any information already answered within the main article.
             """,
-            async_execution=False
+            agent=agent,
+              expected_output=f"""
+                    ### FAQ: {keyword}
+
+                    1. [Insert Question Here]
+                    - [Insert Answer Here]
+
+                    2.[Insert Question Here]
+                    - [Insert Answer Here]
+                    ......
+                    add more
+                    """ 
         )
+
 
     
     def myth_busting_task(self, agent, keyword):
@@ -203,11 +183,11 @@ class ArticleTasks:
             async_execution=False
         )
     
-    def pdf_statistic_task(self, agent, keyword):
+    def pdf_statistic_task(self, agent, keyword,pdf_path):
         return Task(
             description=f"""
-            Analyze data sources for '{keyword}'. Extract the top 10 interesting 
-            statistics about {keyword} from the analyzed data sources.
+            Analyze the provided PDF {pdf_path} file for '{keyword}'. Extract the top 10 most 
+            interesting and relevant statistics about {keyword} from the analyzed PDF data.
             {self.__tip_section()}""",
             agent=agent,
             expected_output=dedent(f"""
@@ -262,14 +242,13 @@ class ArticleTasks:
                                             keyword,
                                             content_result,
                                             pros_and_cons_result,
-                                            faq_result,
                                             myth_busting_result,
                                             pdf_statistic_result,
+                                            country_code
                                         ):
         sections_to_optimize = {
             "Content": content_result,
             "Pros and Cons": pros_and_cons_result,
-            "FAQ": faq_result,
             "Myth Busting": myth_busting_result,
             "PDF Statistics": pdf_statistic_result,
         }   
@@ -283,9 +262,8 @@ class ArticleTasks:
                 Step 2: Optimize the content for Google snippets using the results from prior tasks provided below:
                 1. **Content Section:** {content_result}
                 2. **Pros and Cons Section:** {pros_and_cons_result}
-                3. **FAQ Section:** {faq_result}
-                4. **Myth Busting Section:** {myth_busting_result}
-                5. **PDF Statistics Section:** {pdf_statistic_result}
+                3. **Myth Busting Section:** {myth_busting_result}
+                4. **PDF Statistics Section:** {pdf_statistic_result}
                 
                 Step 3: Generate a complete marketing article blog post that ranks at the top of search results. Ensure that the content is optimized for readability and 
                 comprehension at a 6th-grade level, making it accessible to a wider audience.
@@ -294,7 +272,8 @@ class ArticleTasks:
             expected_output="Full marketing article including all optimized sections and a conclusion.",
             inputs={
                 "keyword": keyword,
-                "sections_to_optimize": sections_to_optimize
+                "sections_to_optimize": sections_to_optimize,
+                "country_code":country_code
             },
             async_execution=False
         )

@@ -12,20 +12,33 @@ from langchain_core.pydantic_v1 import BaseModel, Field
 from googlesearch import search
 from langchain.tools import StructuredTool
 from pydantic import BaseModel
+import json
 
 class SearchAndOptimizeInput(BaseModel):
     keyword: str
     sections_to_optimize: dict
+    country_code: str 
 
 
-def search_and_optimize(keyword: str, sections_to_optimize: dict) -> str:
+def search_and_optimize(input_data: SearchAndOptimizeInput) -> str:
     """Perform a web search, summarize the result, and optimize using other agent results."""
-    print("*****************************")
-    print(f"Keyword: {keyword}")
-    print(f"Sections to Optimize: {sections_to_optimize}")
-    print("*****************************")
+    input_data_json = json.loads(input_data)
+
+    # print("*****************************")
+    keyword = input_data_json.keyword
+    sections_to_optimize = input_data_json.sections_to_optimize  # Get sections to optimize from input data
+    country_code = input_data_json.country_code
+    
+    # Print the sections to optimize
+    print("===================keyword================", keyword)
+    print("===================Sections to Optimize:================", sections_to_optimize)
+
+    print("===================country_code:================", country_code)
+
+    # print("*****************************")
     llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.7)
-    results = search(keyword, num_results=7)
+    search_query = f"{keyword} site:.{country_code}" 
+    results = search(search_query, num_results=7)
     links = [result for result in results]
     summary_content = ""
     
@@ -37,7 +50,6 @@ def search_and_optimize(keyword: str, sections_to_optimize: dict) -> str:
         statistics_result = sections_to_optimize.get('statistics', '')  # Replace with your actual data retrieval logic
         pros_and_cons_result = sections_to_optimize.get('pros', '')
         myth_busting_result = sections_to_optimize.get('myths', '')
-        faq_result = sections_to_optimize.get('faqs', '')
         content_outline = sections_to_optimize.get('content_outline', '')
 
         prompt = f"""
@@ -56,8 +68,8 @@ def search_and_optimize(keyword: str, sections_to_optimize: dict) -> str:
                         - A captivating heading and an optimized Myth Busting section with **6 myths**: {myth_busting_result}
                         - A captivating heading and an optimized Latest Statistics section: {statistics_result}
                         - A captivating heading and a well-structured Conclusion 
-                        - A captivating heading and an optimized FAQ section with **6 commonly asked questions and detailed answers**: {faq_result}
-                    Ensure that each section generated should be more structured, clear, and aligned with Google featured 
+                     
+                        Ensure that each section generated should be more structured, clear, and aligned with Google featured 
                     snippets guidelines. The final output should be concise, understandable, and ready to be used as a Google 
                     featured snippet.
                 """
@@ -65,7 +77,7 @@ def search_and_optimize(keyword: str, sections_to_optimize: dict) -> str:
         # Update the prompt template input variables to include all required variables
         prompt_template = PromptTemplate(
             template=prompt,
-            input_variables=["keyword", "top_link", "statistics", "pros", "myths", "faqs", "content_outline"]
+            input_variables=["keyword", "top_link", "statistics", "pros", "myths", "content_outline"]
         )
         
         summary_chain = prompt_template | llm
@@ -75,7 +87,6 @@ def search_and_optimize(keyword: str, sections_to_optimize: dict) -> str:
             "statistics": statistics_result,
             "pros": pros_and_cons_result,
             "myths": myth_busting_result,
-            "faqs": faq_result,
             "content_outline": content_outline
         })
 
@@ -85,7 +96,7 @@ def search_and_optimize(keyword: str, sections_to_optimize: dict) -> str:
     return summary_content
 
 
-def GoogleSnippetOptimizeTool():
+def GoogleSnippetOptimizeTool(country_code: str):
     return StructuredTool(
         name="search_and_optimize",
         func=search_and_optimize,  # Reference to your existing function
@@ -97,30 +108,10 @@ def GoogleSnippetOptimizeTool():
             2. Optimized Pros and Cons Section
             3. Optimized Myth Busting Section
             4. Optimized PDF Statistics Section
-            5. Optimized FAQ Section
-            6. Conclusion
+            5. Conclusion
 
             Ensure that the final content is structured for readability and comprehension at a 6th-grade level.
         """
     )
 
 
-
-def GoogleSnippetOptimizeTool():
-    return StructuredTool(
-        name="search_and_optimize",
-        func=search_and_optimize,  # Reference to your existing function
-        args_schema=SearchAndOptimizeInput,  # Specify the input schema
-        description="""
-            Search the web for the provided keyword, analyze the top competitor's content, 
-            and generate a complete marketing article blog post that includes:
-            1. Optimized Content Section
-            2. Optimized Pros and Cons Section
-            3. Optimized Myth Busting Section
-            4. Optimized PDF Statistics Section
-            5. Optimized FAQ Section
-            6. Conclusion
-
-            Ensure that the final content is structured for readability and comprehension at a 6th-grade level.
-        """
-    )
