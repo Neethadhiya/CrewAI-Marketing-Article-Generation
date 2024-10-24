@@ -1,0 +1,7 @@
+[theme]
+base="dark"
+primaryColor="#ffffff"  # Set the primary color to white
+backgroundColor="#000000"  # Set the background to black
+secondaryBackgroundColor="#1c1c1c"  # Slightly lighter black for containers
+textColor="#ffffff"  # Set the text color to white
+font="sans serif"

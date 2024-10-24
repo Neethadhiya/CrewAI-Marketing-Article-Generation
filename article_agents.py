@@ -3,7 +3,7 @@ from crewai import Agent
 from langchain.llms import OpenAI
 from langchain.schema import HumanMessage
 from tools.search_summarise_tools import SearchSummarizeTool
-from tools.google_snippet_optimize_tool import GoogleSnippetOptimizeTool
+# from tools.google_snippet_optimize_tool import GoogleSnippetOptimizeTool
 from tools.faq_tools import FAQTool
 
 from langchain.prompts import ChatPromptTemplate
@@ -125,10 +125,27 @@ class ArticleAgents():
     )
   
    
-  def google_snippet_optimization_agent(self, keyword, sections_to_optimize,country_code):
-    optimize_tool = GoogleSnippetOptimizeTool(country_code=country_code) 
+  def simplify_content_agent(self): 
     return Agent(
-        role='Google Snippet Optimization Expert',
+        role='Simplify content expert',
+        goal="""
+                Your task is to simplify the blog post below to be on a 6th-grade english level. Make necessary changes to 
+                improve clarity, conciseness, and structure .
+            """,
+        backstory="""
+                  You are an experienced editor specializing in simplifying complex content. 
+                  You have been hired to review and revise the content to make it more accessible for a broader audience, 
+                  particularly targeting a 6th-grade reading level. Your expertise is in breaking down technical or detailed information 
+                  into clear, easy-to-understand language without losing the key message.
+                  """,
+        tools=[],        
+        verbose=True
+    )
+    
+  def google_snippet_optimization_agent(self): 
+
+    return Agent(
+        role='SEO Google Snippet expert',
         goal="""
                 Your task is to read the guidelines about Google featured snippets from the article provided, 
                 analyze the competitor's copy that is currently ranking for the featured snippet, and optimize 
@@ -136,13 +153,13 @@ class ArticleAgents():
                 improve clarity, conciseness, and structure to meet Google’s criteria for featured snippets.
             """,
         backstory="""
-                    You are an SEO expert specializing in optimizing content for featured snippets. Your expertise 
-                    lies in crafting concise, clear, and structured responses that Google recognizes as the best 
-                    answers for specific queries. After reading the provided guidelines, you will optimize our 
-                    content to meet these standards.
+                  You are an SEO expert specializing in optimizing content for featured snippets. Your expertise 
+                  lies in crafting concise, clear, and structured responses that Google recognizes as the best 
+                  answers for specific queries. After reading the provided guidelines, you will optimize our 
+                  content to meet these standards.
                   """,
-        tools=[optimize_tool],
+        tools=[],  
         verbose=True
     )
-
+  
 

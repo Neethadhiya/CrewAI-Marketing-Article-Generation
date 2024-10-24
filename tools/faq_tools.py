@@ -36,7 +36,7 @@ def get_faq(keyword: str):
         # Check if the results contain related questions
         if "related_questions" in results:
             related_questions = results["related_questions"]
-            print(f"--------------------{results}---------------------")
+            # print(f"--------------------{results}---------------------")
 
             return related_questions
         else:

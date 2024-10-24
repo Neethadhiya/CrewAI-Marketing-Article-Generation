@@ -1,3 +1,4 @@
+import streamlit as st
 from crewai import Crew
 from textwrap import dedent
 from article_agents import ArticleAgents
@@ -7,28 +8,13 @@ import json
 import os
 from dotenv import load_dotenv
 from os.path import join, dirname
-from opentelemetry import trace
-from opentelemetry.sdk.trace import TracerProvider
 from langchain_openai import ChatOpenAI
+import traceback
+import docx
 
 env_path = "/home/appscrip/Desktop/Neetha/Crewai-Marketing-Article-Generation/.env"
 load_dotenv(dotenv_path=env_path)
 import random
-
-tracer_provider = None
-
-def initialize_tracer_provider():
-    global tracer_provider
-    if tracer_provider is None:
-        print("Initializing TracerProvider...")
-        tracer_provider = TracerProvider()
-        trace.set_tracer_provider(tracer_provider)
-    else:
-        print("TracerProvider is already initialized.")
-
-# Call the function to initialize the TracerProvider
-initialize_tracer_provider()
-
 
 class ArticleCrew:
 
@@ -137,23 +123,31 @@ class ArticleCrew:
             verbose=True
         )
         title_result = crew.kickoff()
-        sections_to_optimize = {
-                "Content": content_result,
-                "Pros and Cons": pros_and_cons_result,
-                "Myth Busting": myth_busting_result,
-                "PDF Statistics": pdf_statistic_result,
-            }
-        google_snippet_optimization = agents.google_snippet_optimization_agent(
-                                                                                keyword=self.keyword,
-                                                                                sections_to_optimize=sections_to_optimize,
-                                                                                country_code=self.country_code)          
-        google_snippet_optimization_task = tasks.google_snippet_optimization_task(
-            google_snippet_optimization,
+        
+        simplify_content = agents.simplify_content_agent()        
+        simplify_content_task = tasks.simplify_content_task(
+            simplify_content,
             self.keyword,
+            title_result,
             content_result,  # Now this is a dict
             pros_and_cons_result,  # Now this is a dict
             myth_busting_result,  # Now this is a dict
             pdf_statistic_result,  # Now
+            self.country_code
+        )
+        crew = Crew(
+            agents=[simplify_content],
+            tasks=[simplify_content_task],
+            verbose=True
+        )
+        simplify_content_result = crew.kickoff()
+        
+        google_snippet_optimization = agents.google_snippet_optimization_agent()
+                                               
+        google_snippet_optimization_task = tasks.google_snippet_optimization_task(
+            google_snippet_optimization,
+            self.keyword,
+            simplify_content_result,
             self.country_code
         )
         crew = Crew(
@@ -164,81 +158,70 @@ class ArticleCrew:
         google_snippet_optimization_result = crew.kickoff()
         final_result = {         
             "meta_description_result": meta_description_result,          
-            "title_result": title_result,
             "google_snippet_optimization_result": google_snippet_optimization_result,
             "faq_result": faq_result,
 
         }
-
         return final_result
+st.title("🚀  Generate marketing article 🚀")
 
-if __name__ == "__main__":
-    from textwrap import dedent
-    def validate_code_with_llm(country_code: str) -> bool:
-        """Validate the country code using the LLM."""
-        llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.0)
-        prompt = (
-            f"Please do google search and check '{country_code}' is a valid country code. "
-            "If it is valid, respond with 'yes'. If it is invalid, respond with 'no'."
-        )
+# Input fields for keyword, country code, and PDF path
+country_codes = [
+    "US", "UK", "IN", "CA", "AU", "DE", "FR", "JP", "CN", "BR", "ZA", "IT", "ES", "NL", "SE", "NO", "DK"
+]
 
-        response = llm.invoke(prompt)  # Use .invoke() instead of direct call
-        
-        # Extract the content from the response
-        response_content = response.content if hasattr(response, 'content') else str(response)
+# Other input fields
+keyword = st.text_input("Please enter the keyword around which you would like to generate the marketing article")
+pdf_path = st.text_input("Please enter the path to the PDF file that the PDF statistics agent will analyze:")
 
-        # Normalize the response and check for validity
-        normalized_response = response_content.strip().lower().rstrip('.')
-        return normalized_response == 'yes'
+# Dropdown for selecting country code
+country_code = st.selectbox("Please select the country code for Google search-based keyword research:", country_codes)
+# Validate the country code with LLM
+def validate_code_with_llm(country_code: str) -> bool:
+    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.0)
+    prompt = (
+        f"Please do google search and check '{country_code}' is a valid country code. "
+        "If it is valid, respond with 'yes'. If it is invalid, respond with 'no'."
+    )
+    response = llm.invoke(prompt)
+    normalized_response = response.content.strip().lower().rstrip('.')
+    return normalized_response == 'yes'
 
+if st.button("Generate Article"):
+    # Check if all inputs are entered
+    if not keyword.strip() or not country_code.strip() or not pdf_path.strip():
+        st.error("Please enter all fields: keyword, country code, and PDF path.")
+    else:
+        # Validate the country code using the LLM
+        if not validate_code_with_llm(country_code):
+            st.error(f"The country code '{country_code}' is invalid.")
+        else:
+            with st.spinner("Generating article..."):
+                try:
+                    article_crew = ArticleCrew(keyword, country_code, pdf_path)
+                    result = article_crew.run()
 
-    print("## Welcome to Marketing Article Generation Crew")
-    
-    print('-------------------------------')
-    keyword = input(
-        dedent("""\
-            Please enter the keyword around which you would like to generate the marketing article:
-        """))
-    country_code = input(
-        dedent("""\
-            Please enter the country code for Google search-based keyword research (e.g., "US", "UK", "IN"):
-        """))
-    if not validate_code_with_llm(country_code):
-        print(f"The country code '{country_code}' is invalid. Exiting the program.")
-        exit()
-    
-    # Input for PDF file path
-    pdf_path = input(
-        dedent("""\
-            Please enter the path to the PDF file that the PDF statistics agent will analyze:
-        """))
+                    # Save results to a file
+                    output_file = 'marketing_article_output.md'
+                    final_output = (
+                        f"{result['google_snippet_optimization_result']}\n"
+                        f"{result['faq_result']}\n"
+                    )
+                    with open(output_file, 'w') as file:
+                        file.write(final_output)
 
+                    # Display the final output in Streamlit
+                    st.write(final_output)  # Update this line
 
-    article_crew = ArticleCrew(keyword, country_code, pdf_path)
-    result = article_crew.run()
+                    # Success message for saving the file
+                    st.success(f"Results have been written to {output_file}")
+                    with open(output_file, 'r') as file:
+                        st.download_button(
+                            label="Download Output",
+                            data=file,
+                            file_name=output_file,
+                            mime="text/markdown"
+                        )
 
-    # Define the output file
-    output_file = 'marketing_article_output.txt'
-    title_result_str = result['title_result'].raw
-    data = json.loads(title_result_str)
-    title = data.get("title")
-    final_output = (
-    # "########################\n\n"
-    # f"{title}\n\n"  # Corrected this line
-    # "########################\n\n"
-    f"{result['google_snippet_optimization_result']}\n"
-    f"{result['faq_result']}\n"
-)
-
-
-    # Open the file in write mode and write the final output
-    with open(output_file, 'w') as file:
-        file.write(final_output)
-
-    print(f"Results have been written to {output_file}")
-
-    
-
-
-    
-    
+                except Exception as e:
+                    st.error(f"An error occurred: {e}")

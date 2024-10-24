@@ -25,7 +25,7 @@ def search_summarize(keyword: str, country_code: str) -> str:
         links_1 = links[0]
         links_2 = links[1]
         links_3 = links[2]
-        print("=======",keyword,links_1, links_2, links_3,"============")
+        print("=======",links_1, links_2, links_3,"============")
         prompt = f"""
             You are an SEO content writer. Analyse these 3 top-ranking articles for {keyword}:
             - {links_1}
@@ -58,10 +58,8 @@ def search_summarize(keyword: str, country_code: str) -> str:
         
         summary_content = summary.content if hasattr(summary, 'content') else str(summary)
     return summary_content
-    
 
 def SearchSummarizeTool(country_code: str):
-
     return Tool(
         name="search_summarize",
         func=lambda keyword: search_summarize(keyword, country_code),  # Pass keyword as an argument
